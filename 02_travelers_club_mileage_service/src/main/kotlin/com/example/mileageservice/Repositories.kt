@@ -12,9 +12,9 @@ interface ReviewRepository : CrudRepository<Review, String> {
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT r FROM Review r WHERE r.id = :id")
-  fun findByIdForUpdate(id: String): Review?
+  fun findByIdForUpdate(id: String): Review
 
-  fun findFirstByPlaceIdOrderByCreatedAtAsc(placeId: String): Review?
+  fun findFirstByPlaceIdOrderByCreatedAtAsc(placeId: String): Review
 }
 
 interface UserPointRepository : CrudRepository<UserPoint, String> {
