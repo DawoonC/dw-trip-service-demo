@@ -1,0 +1,41 @@
+services:
+  db:
+    image: mysql:5.7
+    ports:
+      - 33306:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=tripdb
+      - MYSQL_USER=localuser
+      - MYSQL_PASSWORD=password
+    volumes:
+      - ./data/db:/var/lib/mysql
+    restart: always
+    command: ["mysqld", "--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+  dbadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    ports:
+      - 5001:80
+    depends_on:
+      - db
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - PMA_HOST=db
+      - PMA_PORT=3306
+    restart: always
+  web:
+    build: .
+    ports:
+      - 5000:5000
+    depends_on:
+      - db
+    environment:
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
+      - MYSQL_DATABASE=tripdb
+      - MYSQL_USERNAME=localuser
+      - MYSQL_PASSWORD=password
+    volumes:
+      - ./build/libs:/app
+    restart: always
+    command: sh -c "cp ./mileageservice-*-SNAPSHOT.jar mileageservice.jar && java -jar mileageservice.jar"
