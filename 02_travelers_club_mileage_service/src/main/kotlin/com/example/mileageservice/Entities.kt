@@ -1,13 +1,14 @@
 package com.example.mileageservice
 
-import org.hibernate.annotations.GenericGenerator
 import org.springframework.data.annotation.CreatedDate
 import org.springframework.data.annotation.LastModifiedDate
+import org.springframework.data.jpa.domain.support.AuditingEntityListener
 import java.time.LocalDateTime
 import java.util.*
 import javax.persistence.*
 
 @Entity
+@EntityListeners(AuditingEntityListener::class)
 @Table(
   name="reviews",
   indexes=[
@@ -27,6 +28,7 @@ class Review(
 )
 
 @Entity
+@EntityListeners(AuditingEntityListener::class)
 @Table(
   name="user_points",
   indexes=[Index(name="idx_user_id", columnList="user_id", unique=true)],
@@ -40,13 +42,14 @@ class UserPoint(
 )
 
 @Entity
+@EntityListeners(AuditingEntityListener::class)
 @Table(
   name="user_point_histories",
   indexes=[Index(name = "idx_user_id_created_at", columnList = "user_id, created_at")],
 )
 class UserPointHistory(
   @Column(name="user_id", length=255, nullable=false) var userId: String,
-  @CreatedDate @Column(name="created_at", nullable=false) var createdAt: LocalDateTime = LocalDateTime.MIN,
+  @CreatedDate @Column(name="created_at", nullable=false) var createdAt: LocalDateTime = LocalDateTime.now(),
   @Column(name="increased_amount", nullable=false) var increasedAmount: Int = 0,
   @Column(name="decreased_amount", nullable=false) var decreasedAmount: Int = 0,
   @Id var id: String = UUID.randomUUID().toString(),

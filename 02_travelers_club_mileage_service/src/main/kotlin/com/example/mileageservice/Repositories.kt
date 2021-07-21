@@ -23,12 +23,12 @@ interface UserPointRepository : CrudRepository<UserPoint, String> {
 
   @Transactional
   @Modifying
-  @Query("UPDATE UserPoint SET point = point + :point WHERE userId = :userId")
+  @Query("UPDATE UserPoint SET point = point + :point, modifiedAt = CURRENT_TIMESTAMP WHERE userId = :userId")
   fun incrPoint(@Param("userId") userId: String, @Param("point") point: Int): Int
 
   @Transactional
   @Modifying
-  @Query("UPDATE UserPoint SET point = point - :point WHERE userId = :userId")
+  @Query("UPDATE UserPoint SET point = point - :point, modifiedAt = CURRENT_TIMESTAMP WHERE userId = :userId")
   fun decrPoint(@Param("userId") userId: String, @Param("point") point: Int): Int
 }
 

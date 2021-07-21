@@ -42,7 +42,7 @@ class ReviewService(
 
   private fun getOrCreateUserPoint(userId: String): UserPoint? {
     return try {
-      userPointDb.save(UserPoint(userId))
+      userPointDb.save(UserPoint(userId=userId))
     } catch (err: DataIntegrityViolationException) {
       userPointDb.findByUserId(userId)
     }
