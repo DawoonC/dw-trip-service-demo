@@ -23,11 +23,11 @@ data class EventParams(
       EventAction.ADD.name -> {
         if (placeId === null) throw ParamMissingException("placeId must be provided")
         if (content === null) throw ParamMissingException("content must be provided")
-        if (content == "") throw ParamMissingException("content must not be empty")
+        if (content == "") throw InvalidParamException("content must not be empty")
       }
       EventAction.MOD.name -> {
         if (reviewId === null) throw ParamMissingException("reviewId must be provided")
-        if (content == "") throw ParamMissingException("content must not be empty")
+        if (content == "") throw InvalidParamException("content must not be empty")
       }
       EventAction.DELETE.name -> {
         if (reviewId === null) throw ParamMissingException("reviewId must be provided")
