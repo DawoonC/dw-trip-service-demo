@@ -6,17 +6,27 @@ import org.springframework.web.bind.annotation.*
 import javax.servlet.http.HttpServletRequest
 
 @RestController
-class EventController(val reviewService: ReviewService) {
+class EventController(
+  val reviewService: ReviewService,
+  val userPointService: UserPointService,
+) {
 
   private fun handleReviewEvent(params: EventParams): ReviewEventResult {
     params.validateForReview()
+    val userId = params.userId ?: ""
 
-    return when (params.action) {
-      EventAction.ADD.name -> reviewService.addReview(params)
+    val result = when (params.action) {
+      EventAction.ADD.name -> {
+        userPointService.getOrCreateUserPoint(userId)
+        reviewService.addReview(params)
+      }
       EventAction.MOD.name -> reviewService.modifyReview(params)
       EventAction.DELETE.name -> reviewService.deleteReview(params)
       else -> throw InvalidParamException("invalid action")
     }
+
+    userPointService.updateUserPoint(userId, result)
+    return result
   }
 
   @PostMapping("/events")
@@ -53,6 +63,9 @@ class EventController(val reviewService: ReviewService) {
       status,
     )
   }
+
+  @GetMapping("/events")
+  fun getEvents() = "<h1>Hello world!</h1>"
 
   @GetMapping("/")
   fun index() = "<h1>Welcome!</h1>"

@@ -17,7 +17,7 @@ repositories {
 	mavenCentral()
 }
 
-// extra["snippetsDir"] = file("build/generated-snippets")
+extra["snippetsDir"] = file("build/generated-snippets")
 
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
@@ -29,6 +29,7 @@ dependencies {
 	runtimeOnly("mysql:mysql-connector-java")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
+	testImplementation("org.mockito.kotlin:mockito-kotlin:3.2.0")
 }
 
 tasks.withType<KotlinCompile> {
@@ -42,11 +43,19 @@ tasks.withType<Test> {
 	useJUnitPlatform()
 }
 
-// tasks.test {
-// 	outputs.dir(snippetsDir)
-// }
+tasks.test {
+	outputs.dir(file("build/generated-snippets"))
+}
 
-// tasks.asciidoctor {
-// 	inputs.dir(snippetsDir)
-// 	dependsOn(test)
-// }
+tasks.asciidoctor {
+	inputs.dir(file("build/generated-snippets"))
+	dependsOn(tasks.test)
+	outputDir(file("build/docs"))
+}
+
+tasks.bootJar {
+	dependsOn(tasks.asciidoctor)
+	from("build/docs/html5") {
+		into("static/docs")
+	}
+}

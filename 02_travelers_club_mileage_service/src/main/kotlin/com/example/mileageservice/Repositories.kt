@@ -1,18 +1,18 @@
 package com.example.mileageservice
 
 import org.springframework.data.jpa.repository.Lock
-import javax.transaction.Transactional
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.query.Param
+import org.springframework.transaction.annotation.Transactional
 import javax.persistence.LockModeType
 
 interface ReviewRepository : CrudRepository<Review, String> {
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT r FROM Review r WHERE r.id = :id")
-  fun findByIdForUpdate(id: String): Review
+  fun findByIdForUpdate(id: String): Review?
 
   fun findFirstByPlaceIdOrderByCreatedAtAsc(placeId: String): Review
 }

@@ -3,22 +3,20 @@ package com.example.mileageservice
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
+import org.mockito.kotlin.*
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.dao.DataIntegrityViolationException
 
 @SpringBootTest
 class ReviewServiceTests @Autowired constructor(
   val reviewDb: ReviewRepository,
-  val userPointDb: UserPointRepository,
-  val userPointHistoryDb: UserPointHistoryRepository,
   val service: ReviewService,
 ) {
 
   @AfterEach
   fun cleanUp() {
     reviewDb.deleteAll()
-    userPointDb.deleteAll()
-    userPointHistoryDb.deleteAll()
   }
 
   @Test
@@ -48,9 +46,8 @@ class ReviewServiceTests @Autowired constructor(
   }
 
   @Test
-  fun `addReview() should create a new review & update existing UserPoint if UserPoint already exists`() {
+  fun `addReview() should create a new review & is the first review of the place`() {
     // Given: params with userId & placeId
-    // Given: UserPoint already exists for userId with point==10
     // Given: no first review exists for the place
     val userId = "foo"
     val placeId = "bar"
@@ -59,63 +56,22 @@ class ReviewServiceTests @Autowired constructor(
       placeId=placeId,
       content="hello",
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: addReview()
     val result = service.addReview(params)
 
     // Then: new review should be created & hasFirstReviewPoint==true
     // Then: result.increasedPoint == 2 (content 1 point + first review of place 1 point)
-    // Then: UserPoint.point should be updated to 12
     val createdReview = reviewDb.findById(result.reviewId ?: "").get()
     val expectedIncreasedPoint = 1 + 1
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 + expectedIncreasedPoint
 
     assertTrue(createdReview.hasFirstReviewPoint)
     assertEquals(result.increasedPoint, expectedIncreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
-  }
-
-  @Test
-  fun `addReview() should create a new review & create new UserPoint if UserPoint does not exist`() {
-    // Given: params with userId & placeId
-    // Given: UserPoint does not exist for userId
-    // Given: no first review exists for the place
-    val userId = "foo"
-    val placeId = "bar"
-    val params = EventParams(
-      userId=userId,
-      placeId=placeId,
-      content="hello",
-    )
-    assertNull(userPointDb.findByUserId(userId))
-
-    // When: addReview()
-    val result = service.addReview(params)
-
-    // Then: new review should be created & hasFirstReviewPoint==true
-    // Then: result.increasedPoint == 2 (content 1 point + first review of place 1 point)
-    // Then: new UserPoint should be created & has point==2
-    val createdReview = reviewDb.findById(result.reviewId ?: "").get()
-    val expectedIncreasedPoint = 1 + 1
-    val createdUserPoint = userPointDb.findByUserId(userId)
-    val expectedTotalPoint = expectedIncreasedPoint
-
-    assertTrue(createdReview.hasFirstReviewPoint)
-    assertEquals(result.increasedPoint, expectedIncreasedPoint)
-    assertEquals(createdUserPoint?.point, expectedTotalPoint)
   }
 
   @Test
   fun `addReview() should create a new review & first review already exists for the place`() {
     // Given: params with userId & placeId
-    // Given: UserPoint already exists for userId with point==10
     // Given: first review already exists for the place
     val userId = "foo"
     val placeId = "bar"
@@ -123,12 +79,6 @@ class ReviewServiceTests @Autowired constructor(
       userId=userId,
       placeId=placeId,
       content="hello",
-    )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
     )
     reviewDb.save(
       Review(
@@ -144,21 +94,16 @@ class ReviewServiceTests @Autowired constructor(
 
     // Then: new review should be created & hasFirstReviewPoint==false
     // Then: result.increasedPoint == 1 (content 1 point)
-    // Then: UserPoint.point should be updated to 11
     val createdReview = reviewDb.findById(result.reviewId ?: "").get()
     val expectedIncreasedPoint = 1
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 + expectedIncreasedPoint
 
     assertFalse(createdReview.hasFirstReviewPoint)
     assertEquals(result.increasedPoint, expectedIncreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
   }
 
   @Test
   fun `addReview() should create a new review & receive extra point for attached photo`() {
     // Given: params with userId & placeId
-    // Given: UserPoint already exists for userId with point==10
     // Given: no first review exists for the place
     val userId = "foo"
     val placeId = "bar"
@@ -168,46 +113,28 @@ class ReviewServiceTests @Autowired constructor(
       content="hello",
       attachedPhotoIds=listOf("photo_id_01"),
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: addReview()
     val result = service.addReview(params)
 
     // Then: new review should be created & hasFirstReviewPoint==true
     // Then: result.increasedPoint == 2 (content 1 point + attached photo 1 point + first review of place 1 point)
-    // Then: UserPoint.point should be updated to 13
     val createdReview = reviewDb.findById(result.reviewId ?: "").get()
     val expectedIncreasedPoint = 1 + 1 + 1
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 + expectedIncreasedPoint
 
     assertTrue(createdReview.hasFirstReviewPoint)
     assertEquals(result.increasedPoint, expectedIncreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
   }
 
   @Test
   fun `modifyReview() should throw exception when review not found in DB`() {
     // Given: params with not existing reviewId
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
-    val placeId = "bar"
     val reviewId = "foobar"
     val params = EventParams(
       userId=userId,
       reviewId=reviewId,
       content="hello",
-    )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
     )
 
     // When: modifyReview()
@@ -221,7 +148,6 @@ class ReviewServiceTests @Autowired constructor(
   fun `modifyReview() should throw exception when trying to modify review created by other user`() {
     // Given: a review created by other user
     // Given: params with reviewId which was created by other user
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -236,12 +162,6 @@ class ReviewServiceTests @Autowired constructor(
       reviewId=review.id,
       content="hello",
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: modifyReview()
     // Then: exception should be thrown
@@ -254,7 +174,6 @@ class ReviewServiceTests @Autowired constructor(
   fun `modifyReview() should create a new review & receive extra point for attached photo`() {
     // Given: review exists with no photoIds
     // Given: params with attachedPhotoIds
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -270,31 +189,19 @@ class ReviewServiceTests @Autowired constructor(
       content="hello",
       attachedPhotoIds=listOf("photo_id_01"),
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: modifyReview()
     val result = service.modifyReview(params)
 
     // Then: result.increasedPoint == 1 (attached photo 1 point)
-    // Then: UserPoint.point should be updated to 11
     val expectedIncreasedPoint = 1
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 + expectedIncreasedPoint
-
     assertEquals(result.increasedPoint, expectedIncreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
   }
 
   @Test
-  fun `modifyReview() should create a new review & decrease existing point for removing photo`() {
+  fun `modifyReview() should create a new review & decrease point for removing photo`() {
     // Given: review exists with photoIds
     // Given: params with no attachedPhotoIds
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -310,31 +217,19 @@ class ReviewServiceTests @Autowired constructor(
       reviewId=review.id,
       content="hello",
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: modifyReview()
     val result = service.modifyReview(params)
 
     // Then: result.decreasedPoint == 1 (removed photo -1 point)
-    // Then: UserPoint.point should be updated to 9
     val expectedDecreasedPoint = 1
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 - expectedDecreasedPoint
-
     assertEquals(result.decreasedPoint, expectedDecreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
   }
 
   @Test
-  fun `modifyReview() should create a new review & no point change when no extra point`() {
+  fun `modifyReview() should create a new review & no point change`() {
     // Given: review exists with no photoIds
     // Given: params with no attachedPhotoIds
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -349,45 +244,26 @@ class ReviewServiceTests @Autowired constructor(
       reviewId=review.id,
       content="hello",
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: modifyReview()
     val result = service.modifyReview(params)
 
     // Then: result.increasedPoint == 0
     // Then: result.decreasedPoint == 0
-    // Then: UserPoint.point should be updated to 10
     val expectedIncreasedPoint = 0
     val expectedDecreasedPoint = 0
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10
-
     assertEquals(result.increasedPoint, expectedIncreasedPoint)
     assertEquals(result.decreasedPoint, expectedDecreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
   }
 
   @Test
   fun `deleteReview() should throw exception when review not found in DB`() {
     // Given: params with not existing reviewId
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
-    val placeId = "bar"
     val reviewId = "foobar"
     val params = EventParams(
       userId=userId,
       reviewId=reviewId,
-    )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
     )
 
     // When: deleteReview()
@@ -401,7 +277,6 @@ class ReviewServiceTests @Autowired constructor(
   fun `deleteReview() should throw exception when trying to modify review created by other user`() {
     // Given: a review created by other user
     // Given: params with reviewId which was created by other user
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -415,12 +290,6 @@ class ReviewServiceTests @Autowired constructor(
       userId=userId,
       reviewId=review.id,
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: deleteReview()
     // Then: exception should be thrown
@@ -430,10 +299,9 @@ class ReviewServiceTests @Autowired constructor(
   }
 
   @Test
-  fun `deleteReview() should delete review in DB & decrease UserPoint by 3`() {
+  fun `deleteReview() should delete review in DB & decrease extra point from first review`() {
     // Given: review exists with non-empty photoIds & hasFirstReviewPoint==true
     // Given: params with userId & reviewId
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -450,33 +318,21 @@ class ReviewServiceTests @Autowired constructor(
       userId=userId,
       reviewId=reviewId,
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: deleteReview()
     val result = service.deleteReview(params)
 
     // Then: review should be deleted
     // Then: result.decreasedPoint == 3 (content 1 point, attached photo 1 point, first review for the place 1 point)
-    // Then: UserPoint.point should be updated to 7
     val expectedDecreasedPoint = 3
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 - expectedDecreasedPoint
-
     assertTrue(reviewDb.findById(reviewId).isEmpty)
     assertEquals(result.decreasedPoint, expectedDecreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
   }
 
   @Test
-  fun `deleteReview() should delete review in DB & decrease UserPoint by 2`() {
+  fun `deleteReview() should delete review in DB & decrease extra point from attached photo`() {
     // Given: review exists with non-empty photoIds
     // Given: params with userId & reviewId
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -492,33 +348,21 @@ class ReviewServiceTests @Autowired constructor(
       userId=userId,
       reviewId=reviewId,
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: deleteReview()
     val result = service.deleteReview(params)
 
     // Then: review should be deleted
     // Then: result.decreasedPoint == 2 (content 1 point, attached photo 1 point)
-    // Then: UserPoint.point should be updated to 8
     val expectedDecreasedPoint = 2
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 - expectedDecreasedPoint
-
     assertTrue(reviewDb.findById(reviewId).isEmpty)
     assertEquals(result.decreasedPoint, expectedDecreasedPoint)
-    assertEquals(updatedUserPoint.point, expectedTotalPoint)
   }
 
   @Test
-  fun `deleteReview() should delete review in DB & decrease UserPoint by 1`() {
+  fun `deleteReview() should delete review in DB & decrease point from content`() {
     // Given: review exists with no photoIds
     // Given: params with userId & reviewId
-    // Given: UserPoint already exists for userId with point==10
     val userId = "foo"
     val placeId = "bar"
     val review = reviewDb.save(
@@ -533,25 +377,168 @@ class ReviewServiceTests @Autowired constructor(
       userId=userId,
       reviewId=reviewId,
     )
-    val userPoint = userPointDb.save(
-      UserPoint(
-        userId=userId,
-        point=10,
-      ),
-    )
 
     // When: deleteReview()
     val result = service.deleteReview(params)
 
     // Then: review should be deleted
     // Then: result.decreasedPoint == 1 (content 1 point)
-    // Then: UserPoint.point should be updated to 9
     val expectedDecreasedPoint = 1
-    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
-    val expectedTotalPoint = 10 - expectedDecreasedPoint
-
     assertTrue(reviewDb.findById(reviewId).isEmpty)
     assertEquals(result.decreasedPoint, expectedDecreasedPoint)
+  }
+}
+
+@SpringBootTest
+class UserPointServiceTests @Autowired constructor(
+  val userPointDb: UserPointRepository,
+  val userPointHistoryDb: UserPointHistoryRepository,
+  val service: UserPointService,
+) {
+
+  @AfterEach
+  fun cleanUp() {
+    userPointDb.deleteAll()
+    userPointHistoryDb.deleteAll()
+  }
+
+  @Test
+  fun `getOrCreateUserPoint() should create a new row when UserPoint for given userId does not exist`() {
+    // Given: userId
+    // Given: UserPoint for given userId does not exist
+    val userId = "foo"
+
+    // When: getOrCreateUserPoint()
+    val result = service.getOrCreateUserPoint(userId)
+
+    // Then: a new row should be created & returned as a result
+    assertNotNull(result)
+  }
+
+  @Test
+  fun `getOrCreateUserPoint() should return existing row when UserPoint for given userId already exists`() {
+    // Given: userId
+    // Given: UserPoint for given userId already exists
+    val userId = "foo"
+    val userPoint = userPointDb.save(UserPoint(userId=userId))
+
+    // When: getOrCreateUserPoint()
+    val result = service.getOrCreateUserPoint(userId)
+
+    // Then: returned row ID should be equal to existing row ID
+    assertEquals(result?.id, userPoint.id)
+  }
+
+  @Test
+  fun `getOrCreateUserPoint() should catch exception when DataIntegrityViolationException occurs during insert`() {
+    // Given: userId
+    // Given: UserPoint does not exist when queried from DB
+    // Given: exception is thrown when insert
+    val userId = "foo"
+    val mockDb: UserPointRepository = mock()
+    val mockService = UserPointService(mockDb, userPointHistoryDb)
+    whenever(mockDb.findByUserId(userId))
+      .thenReturn(null)
+    whenever(mockDb.save(isA<UserPoint>()))
+      .thenThrow(DataIntegrityViolationException(""))
+
+    // When: getOrCreateUserPoint()
+    // Then: exception should be caught
+    // Then: result should be null (due to mock)
+    assertDoesNotThrow {
+      val result = mockService.getOrCreateUserPoint(userId)
+      assertNull(result)
+    }
+  }
+
+  @Test
+  fun `updateUserPoint() should update existing UserPoint when there is increased point`() {
+    // Given: UserPoint with 10 point
+    // Given: ReviewEventResult with increasedPoint==5
+    val userId = "foo"
+    val userPoint = userPointDb.save(
+      UserPoint(
+        userId=userId,
+        point=10,
+      ),
+    )
+    val eventResult = ReviewEventResult(increasedPoint=5)
+
+    // When: updateUserPoint()
+    service.updateUserPoint(userId, eventResult)
+
+    // Then: UserPoint should be updated to expected point
+    // Then: UserPointHistory should be created for given event
+    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
+    val history = userPointHistoryDb.findAll().firstOrNull()
+    val expectedTotalPoint = 15
+    val expectedIncreasedPoint = 5
+    val expectedDecreasedPoint = 0
+
     assertEquals(updatedUserPoint.point, expectedTotalPoint)
+    assertNotEquals(updatedUserPoint.modifiedAt, userPoint.modifiedAt)
+    assertNotNull(history)
+    assertEquals(history?.userId, userId)
+    assertEquals(history?.increasedAmount, expectedIncreasedPoint)
+    assertEquals(history?.decreasedAmount, expectedDecreasedPoint)
+  }
+
+  @Test
+  fun `updateUserPoint() should update existing UserPoint when there is decreased point`() {
+    // Given: UserPoint with 10 point
+    // Given: ReviewEventResult with decreasedPoint==5
+    val userId = "foo"
+    val userPoint = userPointDb.save(
+      UserPoint(
+        userId=userId,
+        point=10,
+      ),
+    )
+    val eventResult = ReviewEventResult(decreasedPoint=5)
+
+    // When: updateUserPoint()
+    service.updateUserPoint(userId, eventResult)
+
+    // Then: UserPoint should be updated to expected point
+    // Then: UserPointHistory should be created for given event
+    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
+    val history = userPointHistoryDb.findAll().firstOrNull()
+    val expectedTotalPoint = 5
+    val expectedIncreasedPoint = 0
+    val expectedDecreasedPoint = 5
+
+    assertEquals(updatedUserPoint.point, expectedTotalPoint)
+    assertNotEquals(updatedUserPoint.modifiedAt, userPoint.modifiedAt)
+    assertNotNull(history)
+    assertEquals(history?.userId, userId)
+    assertEquals(history?.increasedAmount, expectedIncreasedPoint)
+    assertEquals(history?.decreasedAmount, expectedDecreasedPoint)
+  }
+
+  @Test
+  fun `updateUserPoint() should NOT update existing UserPoint when there is point change`() {
+    // Given: UserPoint with 10 point
+    // Given: ReviewEventResult with no point change
+    val userId = "foo"
+    val userPoint = userPointDb.save(
+      UserPoint(
+        userId=userId,
+        point=10,
+      ),
+    )
+    val eventResult = ReviewEventResult()
+
+    // When: updateUserPoint()
+    service.updateUserPoint(userId, eventResult)
+
+    // Then: UserPoint should NOT be updated to expected point
+    // Then: UserPointHistory should NOT be created for given event
+    val updatedUserPoint = userPointDb.findById(userPoint.id).get()
+    val history = userPointHistoryDb.findAll().firstOrNull()
+    val expectedTotalPoint = 10
+
+    assertEquals(updatedUserPoint.point, expectedTotalPoint)
+    assertEquals(updatedUserPoint.modifiedAt, userPoint.modifiedAt)
+    assertNull(history)
   }
 }
