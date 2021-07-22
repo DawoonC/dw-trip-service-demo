@@ -63,9 +63,24 @@ class EventController(
       status,
     )
   }
+}
 
-  @GetMapping("/events")
-  fun getEvents() = "<h1>Hello world!</h1>"
+@RestController
+class UserController(
+  val userPointDb: UserPointRepository,
+) {
+
+  @GetMapping("/users/{userId}/point")
+  @ResponseBody
+  fun getUserPoint(@PathVariable userId: String): ResponseEntity<BaseResponseBody> {
+    val userPoint = userPointDb.findByUserId(userId)
+    val point = userPoint?.point ?: 0
+
+    return ResponseEntity(
+      BaseResponseBody(success=true, response=UserPointStatus(point)),
+      HttpStatus.OK,
+    )
+  }
 
   @GetMapping("/")
   fun index() = "<h1>Welcome!</h1>"

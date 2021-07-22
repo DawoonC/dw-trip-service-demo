@@ -42,6 +42,10 @@ data class ReviewEventResult(
   val decreasedPoint: Int = 0,
 )
 
+data class UserPointStatus(
+  val point: Int = 0,
+)
+
 data class ErrorResponse(
   val message: String,
 )

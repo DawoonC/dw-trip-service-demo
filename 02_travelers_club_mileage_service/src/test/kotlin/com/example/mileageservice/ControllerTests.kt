@@ -1,6 +1,7 @@
 package com.example.mileageservice
 
 import com.fasterxml.jackson.databind.ObjectMapper
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
@@ -8,6 +9,7 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActions
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 
@@ -98,5 +100,64 @@ class EventControllerTests @Autowired constructor(
     postEvent(params)
       .andExpect(expectedStatus)
       .andExpect(jsonPath("$.error.message").value(expectedMessage))
+  }
+}
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class UserControllerTests @Autowired constructor(
+  val mockMvc: MockMvc,
+  val userPointDb: UserPointRepository,
+) {
+
+  @AfterEach
+  fun cleanUp() {
+    userPointDb.deleteAll()
+  }
+
+  @Test
+  fun `GET user point when UserPoint does not exist in DB`() {
+    // Given: UserPoint for given userId does not exist in DB
+    val userId = "foo"
+
+    // When: GET /users/{userId}/point
+    // Then: status code == 200
+    // Then: returned point should be equal to expected
+    val expectedStatus = status().isOk
+    val expectedPoint = 0
+
+    mockMvc.perform(
+      get("/users/${userId}/point")
+      .contentType(MediaType.APPLICATION_JSON)
+      .accept(MediaType.APPLICATION_JSON)
+    )
+      .andExpect(expectedStatus)
+      .andExpect(jsonPath("$.response.point").value(expectedPoint))
+  }
+
+  @Test
+  fun `GET user point when UserPoint exists in DB`() {
+    // Given: UserPoint for given userId with point==10
+    val userId = "foo"
+    userPointDb.save(
+      UserPoint(
+        userId=userId,
+        point=10,
+      ),
+    )
+
+    // When: GET /users/{userId}/point
+    // Then: status code == 200
+    // Then: returned point should be equal to expected
+    val expectedStatus = status().isOk
+    val expectedPoint = 10
+
+    mockMvc.perform(
+      get("/users/${userId}/point")
+      .contentType(MediaType.APPLICATION_JSON)
+      .accept(MediaType.APPLICATION_JSON)
+    )
+      .andExpect(expectedStatus)
+      .andExpect(jsonPath("$.response.point").value(expectedPoint))
   }
 }
