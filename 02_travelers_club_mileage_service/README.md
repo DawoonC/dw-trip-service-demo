@@ -4,6 +4,7 @@
 - Java >= 11
 - Docker
 
+---
 
 ## Run Application
 ```bash
@@ -18,6 +19,7 @@ $ docker compose up
   - username: root
   - password: root
 
+---
 
 ## API Reference
 
@@ -27,7 +29,7 @@ $ docker compose up
 #### Request Body
 
 |name|type|required?|description|
-|-|-|:-:|-|
+|:-|:-|:-:|:-|
 |`type`|string|O|현재 "REVIEW" 값만 지원|
 |`action`|string|O|- "ADD": 새로운 리뷰 추가<br>- "MOD": 리뷰 수정<br>- "DELETE": 리뷰 삭제|
 |`userId`|string|O|사용자 ID|
@@ -89,7 +91,7 @@ $ curl 'http://localhost:5000/events' -i -X POST \
 #### Response Body
 
 |name|type|description|
-|-|-|-|
+|:-|:-|:-|
 |`success`|boolean|요청의 성공 여부|
 |`response`|object|응답 상세 내용. 실패한 요청의 경우에는 `null` 반환|
 |`response.reviewId`|string|리뷰 ID. 삭제 요청의 경우 `null` 반환|
@@ -123,6 +125,7 @@ $ curl 'http://localhost:5000/events' -i -X POST \
 }
 ```
 
+---
 
 ### GET /users/:user_id/point
 사용자 포인트 조회 API
@@ -137,7 +140,7 @@ $ curl 'http://localhost:5000/users/84b5c589-8cc3-478c-9f8f-a801b771fc8a/point' 
 #### Response Body
 
 |name|type|description|
-|-|-|-|
+|:-|:-|:-|
 |`success`|boolean|요청의 성공 여부|
 |`response`|object|응답 상세 내용. 실패한 요청의 경우에는 `null` 반환|
 |`response.point`|number|사용자의 현재 누적 포인트|
