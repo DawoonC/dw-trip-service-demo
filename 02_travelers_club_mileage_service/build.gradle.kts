@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
 	id("org.springframework.boot") version "2.5.2"
 	id("io.spring.dependency-management") version "1.0.11.RELEASE"
-	id("org.asciidoctor.convert") version "1.5.8"
 	kotlin("jvm") version "1.5.20"
 	kotlin("plugin.spring") version "1.5.20"
 	kotlin("plugin.jpa") version "1.5.20"
@@ -17,8 +16,6 @@ repositories {
 	mavenCentral()
 }
 
-extra["snippetsDir"] = file("build/generated-snippets")
-
 dependencies {
 	implementation("org.springframework.boot:spring-boot-starter-data-jpa")
 	implementation("org.springframework.boot:spring-boot-starter-web")
@@ -28,7 +25,6 @@ dependencies {
 	runtimeOnly("com.h2database:h2")
 	runtimeOnly("mysql:mysql-connector-java")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
-	testImplementation("org.springframework.restdocs:spring-restdocs-mockmvc")
 	testImplementation("org.mockito.kotlin:mockito-kotlin:3.2.0")
 }
 
@@ -41,21 +37,4 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
 	useJUnitPlatform()
-}
-
-tasks.test {
-	outputs.dir(file("build/generated-snippets"))
-}
-
-tasks.asciidoctor {
-	inputs.dir(file("build/generated-snippets"))
-	dependsOn(tasks.test)
-	outputDir(file("build/docs"))
-}
-
-tasks.bootJar {
-	dependsOn(tasks.asciidoctor)
-	from("build/docs/html5") {
-		into("static/docs")
-	}
 }
