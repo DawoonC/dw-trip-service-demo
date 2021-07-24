@@ -21,3 +21,4 @@ $ docker compose up
 
 ## NOTES
 - [API 문서](./docs/API_DOC.md)
+- [DDL](./tripdb.sql)
